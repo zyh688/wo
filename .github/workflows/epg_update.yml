@@ -1,0 +1,31 @@
+name: EPG Otomatik Guncelle
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Python Kur
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Kutuphaneleri Yukle
+        run: pip install requests
+      - name: EPG Ayikla
+        run: python epg_parser.py
+      - name: Kaydet ve Yukle
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          # Eğer dosya yoksa boş bir tane oluştur ki hata vermesin
+          touch epg.json 
+          git add epg.json
+          git commit -m "EPG Guncellendi" || echo "Degisiklik yok"
+          git push

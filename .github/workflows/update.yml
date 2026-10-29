@@ -1,0 +1,26 @@
+name: IPTV Otomatik Guncelleme
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # 6 saatte bir otomatik çalışır
+  workflow_dispatch: # El ile başlatma butonu
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodlari Cek
+        uses: actions/checkout@v3
+        
+      - name: Python Hazirla
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          
+      - name: Paketleri Kur
+        run: pip install requests
+        
+      - name: Botu Calistir
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: python update_list.py
