@@ -47,13 +47,9 @@ def create_optimized_session():
 
 session = create_optimized_session()
 
-# --- TEKİLLEŞTİRİLMİŞ VE DÜZENLENMİŞ YASAKLI LİSTESİ (黑名单) ---
+# --- TEKİLLEŞTİRİLMİŞ VE DÜZENLENMİŞ YASAKLI LİSTESİ ---
 YASAKLI_SET = {
-    # 🚫 强力拦截土耳其频道及标识
-    "turkey", "turkish", "türkçe", "turkce", "türk", "turk", "[tr]", "tr|", "tr >", 
-    "tr ⚡️", "trt", "beintrk", "tivibuspor", "exxen sports", "tabii spor", "tabii", "cine yesilcam",
-
-    # Genel Yetişkin & Film/Dizi / 影视、成人及广告过滤
+    # Genel Yetişkin & Film/Dizi
     "freeshot", "webteizle", "tr film", "arzu film", "erler film", "taşacak bu deniz", "ezel", 
     "filmmedya", "keloğlan", "polskietv", "mediabaytv", "sarkortv", "glwiz", "persian", 
     "gledaitv", "rds tv", "touchtv", "slovakia", "bulgaria", "romania", "azerbeycan", 
@@ -67,8 +63,11 @@ YASAKLI_SET = {
     
     # Kökten Silinecek Ana Kelimeler
     "glife", "cinelux", "max", "TABIISPOR", "TABII", "TR > KARAOKE", "TR | SINEMA VIP", "TR > AKSIYON|GERILIM|SUC",
+    
+    # Cine, Spor ve Yeşilçam Grupları
+    "tabii spor", "tivibuspor", "tivibu spor", "exxen sports", "cine yesilcam", "cine office",
 
-    # 新加影视/点播分类黑名单
+    # Yeni Eklenen Sinema Grupları / Kanalları
     "TR ⚡️ Sinema | 4K Premium TV", 
     "TR ⚡️ Sinema | Salon Vizyon Intro", 
     "AR ★ Shahid | VIP", 
@@ -106,6 +105,7 @@ YEDEK_KAYNAKLAR = [
     "https://files.manuscdn.com/user_upload_by_module/session_file/310519663091167371/lXQCJEWGepXILedX.m3u8",
     "https://raw.githubusercontent.com/yasarfalkan/m3u-dosyam/refs/heads/main/YMBK.m3u8",
     "https://raw.githubusercontent.com/kadirsener1/avva/537423d13dd489dd9ec1627c5b5b2bad765e25a5/playlist.m3u",
+    "https://m3u.ch/pl/cad153c8a0017ddd0ed9d94626d4e839_ae67b8c979274afbf65045873f61a3ec.m3u",
     "https://m3u.ch/pl/1d84259d4bf3a9832067b3c4be608cbe_6f37cddc89cc539132a35d2ac0248c89.m3u",
     "https://raw.githubusercontent.com/viziago/Canl-tv/main/viziagonormal.m3u",
     "https://iptv-org.github.io/iptv/countries/tr.m3u"
@@ -113,12 +113,8 @@ YEDEK_KAYNAKLAR = [
 
 BUYUK_HAVUZ_URL = "https://raw.githubusercontent.com/batuhansabri55/AkcagozTV_Canli/refs/heads/main/paneller.txt"
 
-# ⚽ REGEX 白名单：只精准匹配天空体育、英超、欧冠、香港 NOW 频道及国际体育频道
-TR_KANAL_REGEX = re.compile(
-    r'(SKY\s*SPORTS|PREMIER\s*LEAGUE|CHAMPIONS\s*LEAGUE|NOW\s*SPORTS|NOW\s*TV|'
-    r'EPL|UCL|TNT\s*SPORTS|BEIN\s*SPORTS|SUPERSPORT|SPORTS?|FOOTBALL|SOCCER)', 
-    re.IGNORECASE
-)
+# REGEX ÖNBELLEKLERİ
+TR_KANAL_REGEX = re.compile(r'(\[TR\]|\bTR\b|\.TR\b|TURKEY|TÜRK|TURKISH|TÜRKÇE)', re.IGNORECASE)
 
 # Europe, FPS, 50fps, 60fps ve kalite takıları temizleme regex'i
 KALITE_REGEX = re.compile(
@@ -128,7 +124,7 @@ KALITE_REGEX = re.compile(
 )
 YEDEK_REGEX = re.compile(r'\b(YEDEK|BACKUP|ALT|TEST)\b', re.IGNORECASE)
 
-# DİL VE ÜLKE TAKILARINI TEMİZLEME REGEX'İ
+# DİL VE ÜLKE TAKILARINI (TR, TURKISH, TURKEY VB.) TEMİZLEME REGEX'İ
 DIL_REGEX = re.compile(r'\b(TURKISH|TÜRKÇE|TURKCE|TURKEY|TR)\b', re.IGNORECASE)
 PRE_TR_HABER = re.compile(r'\bTR\.HABER\b', re.IGNORECASE)
 BRACKETS_REGEX = re.compile(r'\[.*?\]|\(.*?\)')
@@ -153,21 +149,21 @@ def havuz_kanal_ismini_temizle(extinf_satiri: str) -> str:
         prefix = '#EXTINF:-1 tvg-id="" group-title="HAVUZ CANLI"'
         kanal_adi = extinf_satiri
 
-    # Özel durum koruması
+    # Özel durum: TRT HABER veya TR HABER gibi isimler bozulmasın
     kanal_adi = PRE_TR_HABER.sub('TRT_HABER_TEMP', kanal_adi)
 
     # 1. Parantez içleri ve reklam/site uzantılarını uçur
     kanal_adi = BRACKETS_REGEX.sub('', kanal_adi)
     kanal_adi = REKLAM_REGEX.sub('', kanal_adi)
     
-    # 2. Ülke / Dil Takılarını ve Yedek İbarelerini Temizle
+    # 2. Ülke / Dil Takılarını (TR, TURKEY, TURKISH) ve Yedek İbarelerini Temizle
     kanal_adi = DIL_REGEX.sub('', kanal_adi)
     kanal_adi = YEDEK_REGEX.sub('', kanal_adi)
 
-    # 3. Süslü veya Standart Kalite/Bölge takılarını temizle
+    # 3. Süslü veya Standart Kalite/Bölge takılarını (Europe, 50FPS, FHD vb.) temizle
     kanal_adi = KALITE_REGEX.sub('', kanal_adi)
     
-    # Geçici korumayı temizle
+    # Geçici TRT HABER korumasını geri getir
     kanal_adi = kanal_adi.replace('TRT_HABER_TEMP', 'TR HABER')
 
     # 4. Sembolleri, emojileri, bayrakları uçur
@@ -272,7 +268,7 @@ def havuz_paneli_test_et(url: str):
 def havuzdan_canli_kanallari_getir():
     link_listesi = havuzu_indir()
     if not link_listesi: return ""
-    logging.info("⚡ Tam 3 adet BENZERSİZ canlı ve VIP testinden geçmiş TV paneli aranıyor, lütfen bekleyin...")
+    logging.info("⚡ Tam 3 adet BENZERSİZ canlı ve VIP testinden geçmiş Türkçe TV paneli aranıyor, lütfen bekleyin...")
     
     bulunan_panellerin_icerikleri = []
     bulunan_domainler = set()  
@@ -301,16 +297,8 @@ def havuzdan_canli_kanallari_getir():
 
 def github_taze_link_avla():
     yeni_kaynaklar = []
-    # 🔍 计算两天前的日期，只抓取最近 2 天内更新的 GitHub 文件
     tarih = (datetime.datetime.now() - datetime.timedelta(days=2)).strftime('%Y-%m-%d')
-    
-    # 🔍 针对天空体育、英超、欧冠、香港 NOW 体育及国际体育频道的精准搜索关键词
-    arama_terimleri = [
-        "sky sports", "premier league", "champions league", 
-        "now sports", "now tv hk", "epl", "ucl", 
-        "tnt sports", "bein sports", "supersport"
-    ]
-    
+    arama_terimleri = ["trt1", "documentary", "belgesel"]
     github_headers = HEADERS.copy()
     
     if github_token := os.environ.get("GITHUB_TOKEN"):
